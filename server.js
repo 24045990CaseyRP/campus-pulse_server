@@ -26,8 +26,8 @@ const upload = multer({
 // ALLOWED ORIGINS - Add your frontend URL here when deployed
 const allowedOrigins = [
     "http://localhost:3000",
-    "http://localhost:5173", // Common Vite port
-    // "https://your-frontend-app.onrender.com" 
+    "http://localhost:5173",
+    "https://campus-pulse-server.onrender.com/"
 ];
 
 app.use(cors({
