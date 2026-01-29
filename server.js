@@ -89,10 +89,21 @@ const authorizeRole = (roles) => {
     };
 };
 
+const rateLimit = require('express-rate-limit');
+
+// RATE LIMITER FOR AUTH
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per windowMs
+    message: { message: "Too many login/register attempts from this IP, please try again after 15 minutes" },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
 // --- AUTH ROUTES ---
 
 // Register
-app.post('/register', async (req, res) => {
+app.post('/register', authLimiter, async (req, res, next) => {
     const { username, password, role } = req.body;
 
     // Default role to student if not provided
@@ -115,13 +126,12 @@ app.post('/register', async (req, res) => {
 
         res.status(201).json({ message: 'User registered successfully' });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Error registering user' });
+        next(err);
     }
 });
 
 // Login
-app.post('/login', async (req, res) => {
+app.post('/login', authLimiter, async (req, res, next) => {
     const { username, password } = req.body;
 
     try {
@@ -140,8 +150,7 @@ app.post('/login', async (req, res) => {
 
         res.json({ token, username: user.username, role: user.role });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Error logging in' });
+        next(err);
     }
 });
 
@@ -157,6 +166,50 @@ app.get('/', (req, res) => {
     res.send('Campus Pulse API is running!');
 });
 
-app.listen(port, () => {
+
+// --- 404 HANDLER ---
+app.use((req, res, next) => {
+    res.status(404).json({ message: 'Route not found' });
+});
+
+// --- GLOBAL ERROR HANDLER ---
+app.use((err, req, res, next) => {
+    console.error(err.stack); // Log the stack trace for debugging
+
+    // Handle specific error types if needed (e.g., Multer errors)
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({ message: `File upload error: ${err.message}` });
+    }
+
+    // Default error response
+    const statusCode = err.status || 500;
+    const message = err.message || 'Internal Server Error';
+
+    res.status(statusCode).json({
+        message: message,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }) // stack trace only in dev
+    });
+});
+
+const server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
+
+// --- GRACEFUL SHUTDOWN ---
+const shutdown = async () => {
+    console.log('Shutting down server...');
+    server.close(async () => {
+        console.log('HTTP server closed.');
+        try {
+            await pool.end();
+            console.log('Database pool closed.');
+            process.exit(0);
+        } catch (err) {
+            console.error('Error closing database pool:', err);
+            process.exit(1);
+        }
+    });
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

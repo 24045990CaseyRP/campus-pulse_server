@@ -4,7 +4,7 @@ const router = express.Router();
 module.exports = (pool, upload, authenticateToken, sharp) => {
 
     // Get All Active Pings (The "Feed")
-    router.get('/pings', async (req, res) => {
+    router.get('/pings', async (req, res, next) => {
         try {
             const query = `
                 SELECT p.id, p.user_id, p.content, p.category, p.location_name, p.upvotes, p.created_at, 
@@ -21,13 +21,12 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
             const [rows] = await pool.query(query);
             res.json(rows);
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error fetching pings' });
+            next(err);
         }
     });
 
     // Create a New Ping (With Image Upload & Compression)
-    router.post('/pings', authenticateToken, upload.single('image'), async (req, res) => {
+    router.post('/pings', authenticateToken, upload.single('image'), async (req, res, next) => {
         const { content, category, location_name } = req.body;
         let imageBuffer = null;
 
@@ -53,13 +52,12 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
                 pingId: result.insertId
             });
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error creating ping' });
+            next(err);
         }
     });
 
     // Edit a Ping
-    router.put('/pings/:id', authenticateToken, upload.single('image'), async (req, res) => {
+    router.put('/pings/:id', authenticateToken, upload.single('image'), async (req, res, next) => {
         const pingId = req.params.id;
         const { content, category, location_name } = req.body;
         let imageBuffer = null;
@@ -98,13 +96,12 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
 
             res.json({ message: 'Ping updated successfully' });
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error updating ping' });
+            next(err);
         }
     });
 
     // Vote on a Ping (Upvote)
-    router.post('/pings/:id/vote', authenticateToken, async (req, res) => {
+    router.post('/pings/:id/vote', authenticateToken, async (req, res, next) => {
         const pingId = req.params.id;
         const userId = req.user.id;
 
@@ -131,13 +128,12 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
 
             res.json({ message: 'Upvoted!', voted: true });
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error voting' });
+            next(err);
         }
     });
 
     // Delete a Ping (Author or Admin)
-    router.delete('/pings/:id', authenticateToken, async (req, res) => {
+    router.delete('/pings/:id', authenticateToken, async (req, res, next) => {
         const pingId = req.params.id;
 
         try {
@@ -152,8 +148,7 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
             await pool.execute('DELETE FROM pings WHERE id = ?', [pingId]);
             res.json({ message: 'Ping deleted' });
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error deleting ping' });
+            next(err);
         }
     });
 

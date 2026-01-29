@@ -4,7 +4,7 @@ const router = express.Router();
 module.exports = (pool, upload, authenticateToken, sharp) => {
 
     // Get Comments for a Ping
-    router.get('/pings/:id/comments', async (req, res) => {
+    router.get('/pings/:id/comments', async (req, res, next) => {
         const pingId = req.params.id;
         try {
             const query = `
@@ -18,13 +18,12 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
             const [rows] = await pool.query(query, [pingId]);
             res.json(rows);
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error fetching comments' });
+            next(err);
         }
     });
 
     // Add a Comment to a Ping (with optional image & Compression)
-    router.post('/pings/:id/comments', authenticateToken, upload.single('image'), async (req, res) => {
+    router.post('/pings/:id/comments', authenticateToken, upload.single('image'), async (req, res, next) => {
         const pingId = req.params.id;
         const { content } = req.body;
         const userId = req.user.id;
@@ -47,13 +46,12 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
             );
             res.status(201).json({ message: 'Comment added' });
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error adding comment' });
+            next(err);
         }
     });
 
     // Edit a Comment
-    router.put('/comments/:id', authenticateToken, upload.single('image'), async (req, res) => {
+    router.put('/comments/:id', authenticateToken, upload.single('image'), async (req, res, next) => {
         const commentId = req.params.id;
         const { content } = req.body;
         let imageBuffer = null;
@@ -90,13 +88,12 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
 
             res.json({ message: 'Comment updated' });
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error updating comment' });
+            next(err);
         }
     });
 
     // Delete a Comment
-    router.delete('/comments/:id', authenticateToken, async (req, res) => {
+    router.delete('/comments/:id', authenticateToken, async (req, res, next) => {
         const commentId = req.params.id;
 
         try {
@@ -111,8 +108,7 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
             await pool.execute('DELETE FROM comments WHERE id = ?', [commentId]);
             res.json({ message: 'Comment deleted' });
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Error deleting comment' });
+            next(err);
         }
     });
 
