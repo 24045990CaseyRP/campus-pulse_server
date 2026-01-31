@@ -27,6 +27,8 @@ const upload = multer({
 const allowedOrigins = [
     "http://localhost:3000",
     "http://localhost:5173",
+    "campus-pulse-8494260iq-caseys-projects-b1ab35b8.vercel.app",
+    "campus-pulse-plum.vercel.app",
     "https://campus-pulse-server.onrender.com/"
 ];
 
