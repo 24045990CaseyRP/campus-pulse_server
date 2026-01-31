@@ -8,7 +8,7 @@ module.exports = (pool, upload, authenticateToken, sharp) => {
         const pingId = req.params.id;
         try {
             const query = `
-                SELECT c.id, c.content, c.created_at, u.username,
+                SELECT c.id, c.content, c.created_at, u.username, c.user_id,
                        TO_BASE64(c.image_data) as image_base64
                 FROM comments c
                 JOIN users u ON c.user_id = u.id
