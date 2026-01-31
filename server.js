@@ -139,7 +139,7 @@ app.post('/login', authLimiter, async (req, res, next) => {
         const user = users[0];
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Invalid username or password' });
         }
 
         const token = jwt.sign(
